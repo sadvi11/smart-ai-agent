@@ -17,19 +17,34 @@ Built to demonstrate production-grade AI engineering for Canadian tech roles.
 ---
 
 ## Architecture
-User Request
-↓
-Flask API (app.py)
-↓
-Agent Brain (agent.py) ← Claude API
-↓
-Tool Execution (tools.py)
-↓        ↓
-Weather API   Calculator
-↓
-Memory Storage (memory.py)
-↓
-Supabase Database
+
+```mermaid
+flowchart TD
+    A[User Request] --> B[Flask API app.py]
+    B --> C[Agent Brain agent.py]
+    C --> D{Claude API Decides Tool}
+    D --> E[Weather API]
+    D --> F[Calculator]
+    D --> G[Direct Answer]
+    E --> H[Agent Response]
+    F --> H
+    G --> H
+    H --> I[Memory Storage memory.py]
+    I --> J[(Supabase Database)]
+    H --> B
+
+    style A fill:#4A90D9,color:#fff
+    style B fill:#7B68EE,color:#fff
+    style C fill:#FF6B6B,color:#fff
+    style D fill:#FFA500,color:#fff
+    style E fill:#2ECC71,color:#fff
+    style F fill:#2ECC71,color:#fff
+    style G fill:#2ECC71,color:#fff
+    style H fill:#FF6B6B,color:#fff
+    style I fill:#7B68EE,color:#fff
+    style J fill:#4A90D9,color:#fff
+```
+
 ---
 
 ## Project Structure
