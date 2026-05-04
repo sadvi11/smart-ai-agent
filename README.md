@@ -220,6 +220,19 @@ app.py = API Gateway (northbound interface)
 
 ---
 
+## Screenshots
+
+### API Response
+![API Response](screenshots/api-response.png)
+
+### Memory Working
+![Memory Test](screenshots/memory.png)
+
+### Evaluator Results
+![Evaluator Score 1](screenshots/evaluator1-score.png)
+![Evaluator Score 2](screenshots/evaluator2-score.png)
+![Evaluator Score 3](screenshots/evaluator3-score.png)
+
 ## Author
 
 Sadhvi Sharma
