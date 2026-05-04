@@ -30,7 +30,7 @@ def run_evaluation():
             "name": "Math calculation",
             "category": "Normal",
             "input": "What is 150 multiplied by 12?",
-            "must_contain": ["1800"],
+            "must_contain": ["1,800"],
             "must_not_contain": ["error"]
         },
         {
