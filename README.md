@@ -49,13 +49,16 @@ flowchart TD
 
 ## Project Structure
 smart-ai-agent/
-├── agent.py        Brain — Claude decides which tool to use
-├── tools.py        Hands — calls real APIs (weather, calculator)
-├── memory.py       Memory — saves conversations to Supabase
-├── evaluator.py    Judge — automated testing framework
-├── app.py          Door — Flask REST API
-├── .env            Secrets — never pushed to GitHub
-└── .gitignore      Protection — keeps secrets safe
+│
+├── agent.py          ← Brain. Claude reads the question and decides which tool to call
+├── tools.py          ← Hands. Calls real live APIs — weather and calculator
+├── memory.py         ← Memory. Saves every conversation to Supabase database
+├── evaluator.py      ← Judge. Runs 7 automated tests including security checks
+├── app.py            ← Door. Flask REST API — 3 endpoints for chat, history, health
+├── requirements.txt  ← Dependencies. All packages needed to run the project
+├── .gitignore        ← Protection. Keeps secrets and sensitive files off GitHub
+├── .env              ← Secrets. API keys — never pushed to GitHub
+└── README.md         ← Docs. Setup guide, architecture, API usage
 
 ---
 
