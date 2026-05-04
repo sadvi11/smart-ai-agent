@@ -228,4 +228,4 @@ AWS Solutions Architect Associate Certified
 Permanent Resident — Available anywhere in Canada
 
 GitHub: github.com/sadvi11
-LinkedIn: linkedin.com/in/your-profile
+LinkedIn: linkedin.com/in/sadhvi-sharma-5789a6249
