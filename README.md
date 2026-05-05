@@ -32,6 +32,8 @@ flowchart TD
     H --> I[Memory Storage memory.py]
     I --> J[(Supabase Database)]
     H --> B
+    B --> K[AWS EC2 ca-central-1]
+    K --> L[CloudWatch Logs]
 
     style A fill:#4A90D9,color:#fff
     style B fill:#7B68EE,color:#fff
@@ -43,6 +45,8 @@ flowchart TD
     style H fill:#FF6B6B,color:#fff
     style I fill:#7B68EE,color:#fff
     style J fill:#4A90D9,color:#fff
+    style K fill:#FF9900,color:#fff
+    style L fill:#FF9900,color:#fff
 ```
 
 ---
