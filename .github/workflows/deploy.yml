@@ -1,4 +1,3 @@
- cat > .github/workflows/deploy.yml << 'EOF'
 name: Deploy Smart AI Agent
 
 on:
@@ -30,4 +29,3 @@ jobs:
           nohup python3 app.py > agent.log 2>&1 &
           sleep 3
           echo "Deployment complete"
-EOF
