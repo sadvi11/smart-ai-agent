@@ -21,15 +21,13 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-          ssh ubuntu@${{ secrets.EC2_HOST }} bash -s << 'ENDSSH'
-            cd ~/smart-ai-agent
-            git pull origin main
-            source venv/bin/activate
-            pip install -r requirements.txt --quiet
-            pkill -f "python3 app.py" || true
-            sleep 2
-            nohup python3 app.py > agent.log 2>&1 &
-            disown
-            sleep 3
-            echo "Deployment complete"
-ENDSSH
+          ssh ubuntu@${{ secrets.EC2_HOST }} "
+            cd ~/smart-ai-agent &&
+            git pull origin main &&
+            source venv/bin/activate &&
+            pip install -r requirements.txt --quiet &&
+            pkill -f 'python3 app.py' || true &&
+            sleep 2 &&
+            nohup python3 app.py > agent.log 2>&1 </dev/null & disown &&
+            echo Deployment complete
+          "
