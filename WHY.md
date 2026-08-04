@@ -23,20 +23,10 @@ This project bridges that gap.
 - Memory storage = UDM
 - Flask API = Northbound API Gateway
 
-## Target Roles In Canada
-- AI Engineer, Cloud Engineer, MLOps Engineer, DevOps Engineer
-
-## Target Companies
-- Banks: RBC, TD, BMO, Scotiabank
-- Telecoms: Bell, Rogers, Telus
-- Tech: Shopify, Hootsuite, OpenText
-- Federal: IT-02, IT-03 roles
-
 ## Author
 Sadhvi Sharma
 5 years production experience — Nokia 5G + AWS
 AWS Solutions Architect Associate certified
 Permanent Resident — available anywhere in Canada
-git add WHY.md
 git commit -m "Add WHY.md explaining Canadian job market context"
 git push
