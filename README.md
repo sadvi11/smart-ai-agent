@@ -1,13 +1,25 @@
-# Autonomous Smart AI Agent v2.0
+# Autonomous Smart AI Agent
 
-> Production-grade AI agent with RAG pipeline, tool use, persistent memory, and automated security evaluation.
+**An agent that chooses its own tools, remembers across sessions, and is tested against prompt injection rather than assumed safe.**
 
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)](https://python.org)
+[![CI](https://github.com/sadvi11/smart-ai-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/sadvi11/smart-ai-agent/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://python.org)
 [![Claude API](https://img.shields.io/badge/Claude_API-Anthropic-D4A27F)](https://anthropic.com)
-[![Flask](https://img.shields.io/badge/Flask-REST_API-000000?logo=flask)](https://flask.palletsprojects.com)
-[![Supabase](https://img.shields.io/badge/Supabase-pgvector-3ECF8E?logo=supabase)](https://supabase.com)
-[![RAG](https://img.shields.io/badge/RAG-pgvector%20%2B%20Semantic%20Search-blue)]()
-[![Status](https://img.shields.io/badge/Status-Deployed%20%26%20Verified-2ea44f)]()
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+<!-- DEMO SLOT — replace this comment with the demo GIF once recorded:
+     ![Demo](docs/demo.gif)
+     Should show (~25s): the agent selecting a tool and executing it, then recalling
+     context from an earlier turn, then the eval suite rejecting a prompt-injection
+     attempt. The security eval is the differentiator — most agent demos skip it. -->
+
+| | |
+|---|---|
+| **Stack** | Claude API · pgvector on Supabase · Flask · RAG pipeline |
+| **Capabilities** | Autonomous tool selection · persistent memory · semantic retrieval |
+| **Evaluation** | Automated suite covering functional behaviour, prompt injection and SQL injection |
+
+---
 
 ---
 
