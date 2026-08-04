@@ -229,7 +229,7 @@ smart-ai-agent/
 
 ---
 
-## Interview Talking Points
+## Design Decisions
 
 - **RAG architecture** — chunking, embedding, vector search, context injection
 - **pgvector** — what it is, why Supabase supports it, how cosine similarity works
