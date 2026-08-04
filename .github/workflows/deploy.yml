@@ -1,8 +1,9 @@
 name: Deploy Smart AI Agent
 
+# Manual only. SSHes into a live EC2 host, so it runs when a deploy is wanted
+# rather than on every commit.
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
