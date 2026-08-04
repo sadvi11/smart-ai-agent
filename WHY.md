@@ -25,8 +25,8 @@ This project bridges that gap.
 
 ## Author
 Sadhvi Sharma
-5 years production experience — Nokia 5G + AWS
-AWS Solutions Architect Associate certified
+2.5 years production infrastructure experience at Nokia (5G Packet Core) — now building on AWS and Azure
+AZ-900 (Microsoft Azure Fundamentals) certified
 Permanent Resident — available anywhere in Canada
 git commit -m "Add WHY.md explaining Canadian job market context"
 git push
