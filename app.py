@@ -110,10 +110,15 @@ def chat():
 
         answer, conversation_history = run_agent(message, conversation_history)
 
-        # Persist the turn. Failures here are logged inside memory.py and must
-        # not fail the request -- the user already has their answer.
-        memory.save_message(session_id, "user", message)
-        memory.save_message(session_id, "assistant", answer)
+        # Persist the turn. The user already has their answer, so a storage
+        # failure must never turn a successful exchange into a 500. memory.py
+        # swallows its own errors today, but this guard keeps that guarantee
+        # at the call site rather than depending on the callee's behaviour.
+        try:
+            memory.save_message(session_id, "user", message)
+            memory.save_message(session_id, "assistant", answer)
+        except Exception as exc:
+            logger.error(f"Failed to persist turn for {session_id}: {exc}", exc_info=True)
 
         response = {
             "answer": answer,

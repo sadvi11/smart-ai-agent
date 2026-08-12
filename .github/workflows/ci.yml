@@ -32,3 +32,26 @@ jobs:
 
       - name: Byte-compile all modules
         run: python -m compileall -q .
+
+  test:
+    name: API is wired to the agent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      # Deliberately not the full requirements.txt: sentence-transformers pulls
+      # torch, and these tests stub it out. Installing it would add minutes per
+      # run and test PyTorch rather than this project's wiring.
+      - name: Install test dependencies
+        run: pip install flask flask-cors anthropic requests python-dotenv pytest
+
+      # These exist because the lint job above passed for weeks while
+      # POST /chat returned a hardcoded string and never called the agent.
+      # Linting proves code parses; these prove it is connected.
+      - name: Run API wiring tests
+        run: python -m pytest tests/ -q
