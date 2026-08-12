@@ -1,11 +1,22 @@
+# Credentials — never commit
 .env
+.env.*
 *.pem
-*.json
+*.key
+
+# Python
 __pycache__/
+*.py[cod]
+.venv/
 venv/
+.pytest_cache/
+.coverage
+
+# Local run output
 *.log
-evaluation_report.json
-.DS_Store
 agent.log
 nohup.out
-screenshots/.DS_Store
+evaluation_report.json
+
+# OS
+.DS_Store

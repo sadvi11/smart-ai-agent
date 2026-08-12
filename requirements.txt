@@ -1,8 +1,26 @@
-anthropic==0.39.0
+# Claude API client. The 0.39.0 pin predated several SDK releases; a floor
+# keeps it current without breaking on a future major.
+anthropic>=0.116.0
+
+# REST API
 flask==3.0.0
 flask-cors==4.0.0
-python-dotenv==1.0.0
-requests==2.31.0
+
+# RAG: local embedding model + vector maths. Both were imported by rag.py but
+# missing from this file, so `pip install -r requirements.txt` followed by
+# running the app failed with ModuleNotFoundError.
+sentence-transformers>=3.0.0
+numpy>=1.26.0
+
+# Vector store and conversation memory
 supabase==2.4.1
+
+# Tool implementations (weather lookup)
+requests==2.31.0
+
+# Config
+python-dotenv==1.0.0
+
+# Tests
 pytest==7.4.3
 pytest-cov==4.1.0

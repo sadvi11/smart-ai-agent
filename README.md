@@ -1,249 +1,208 @@
-# Autonomous Smart AI Agent v2.0
+# Smart AI Agent
 
-> Production-grade AI agent with RAG pipeline, tool use, persistent memory, and automated security evaluation.
+> An autonomous Claude agent that decides which tool to call, grounds its answers in a pgvector knowledge base, remembers past sessions, and is graded by an automated suite that includes prompt-injection and SQL-injection attacks.
 
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)](https://python.org)
-[![Claude API](https://img.shields.io/badge/Claude_API-Anthropic-D4A27F)](https://anthropic.com)
-[![Flask](https://img.shields.io/badge/Flask-REST_API-000000?logo=flask)](https://flask.palletsprojects.com)
-[![Supabase](https://img.shields.io/badge/Supabase-pgvector-3ECF8E?logo=supabase)](https://supabase.com)
-[![RAG](https://img.shields.io/badge/RAG-pgvector%20%2B%20Semantic%20Search-blue)]()
-[![Status](https://img.shields.io/badge/Status-Deployed%20%26%20Verified-2ea44f)]()
+[![CI](https://github.com/sadvi11/smart-ai-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/sadvi11/smart-ai-agent/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![Claude](https://img.shields.io/badge/Claude-Haiku%204.5-D4A27F?logo=anthropic&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-REST%20API-000000?logo=flask&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-pgvector-3ECF8E?logo=supabase&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
 
----
+Most "AI agent" projects are one API call in a wrapper. The part worth building is
+everything around the call: deciding *whether* to use a tool, retrieving context
+before answering, keeping state across sessions — and then proving it holds up when
+someone attacks it.
 
-## What This Project Does
+## Tech stack
 
-An autonomous AI agent with a full RAG (Retrieval Augmented Generation) pipeline —
-the agent independently decides which tool to invoke, retrieves relevant context from
-an uploaded knowledge base using semantic search, and maintains persistent memory
-across sessions. Includes a 7-test automated evaluation framework covering functional
-behaviour and security robustness — achieving 86% pass rate including prompt injection
-and SQL injection attack scenarios.
-
----
+| Layer | Choice | Why |
+|---|---|---|
+| Reasoning | Claude Haiku 4.5 (`anthropic` SDK) | Tool-use decisions are cheap and frequent; Haiku keeps latency and cost down |
+| Tool use | Native Anthropic tool calling | The model picks the tool — no keyword routing or intent classifier |
+| Retrieval | `sentence-transformers` (`all-MiniLM-L6-v2`) + pgvector | Embeddings computed locally, so no per-query embedding cost |
+| Vector store | Supabase (Postgres + pgvector) | One managed service for both vectors and conversation history |
+| Memory | Supabase `conversations` table | Sessions survive process restarts |
+| API | Flask + flask-cors | Small surface; the agent is the product, not the framework |
+| Evaluation | Custom harness (`evaluator.py`) | Functional *and* adversarial cases, run on demand |
 
 ## Architecture
 
-```
-                        USER REQUEST
-                             │
-                    ┌────────▼────────┐
-                    │   Flask API     │
-                    │  /chat          │
-                    │  /upload        │
-                    │  /search        │
-                    │  /documents     │
-                    │  /history       │
-                    │  /health        │
-                    └────────┬────────┘
-                             │
-              ┌──────────────▼──────────────┐
-              │         agent.py            │
-              │      Decision Layer         │
-              │    (AMF equivalent)         │
-              │                             │
-              │  1. Retrieve RAG context    │
-              │  2. Build system prompt     │
-              │  3. Call Claude API         │
-              │  4. Execute tools if needed │
-              └──┬──────────┬──────────┬───┘
-                 │          │          │
-        ┌────────▼──┐ ┌─────▼──┐ ┌────▼──────────┐
-        │  rag.py   │ │tools.py│ │  memory.py    │
-        │ RAG Layer │ │Execution│ │  Data Layer   │
-        │           │ │ Layer  │ │  (UDM equiv)  │
-        │ • Chunk   │ │        │ │  Supabase     │
-        │ • Embed   │ │Weather │ │  PostgreSQL   │
-        │ • Search  │ │Calc    │ │               │
-        └─────┬─────┘ └────────┘ └───────────────┘
-              │
-        ┌─────▼──────────┐
-        │ Supabase       │
-        │ pgvector store │
-        │ 384-dim vectors│
-        └────────────────┘
+```mermaid
+flowchart TB
+    Client([Client]) -->|POST /chat| API[Flask API<br/>app.py]
+
+    API -->|load prior turns| MEM[(Supabase<br/>conversations)]
+    API --> AGENT[Agent loop<br/>agent.py]
+
+    AGENT -->|1 . embed query| EMB[sentence-transformers<br/>all-MiniLM-L6-v2]
+    EMB -->|2 . similarity search| VEC[(Supabase pgvector<br/>documents)]
+    VEC -->|retrieved context| AGENT
+
+    AGENT -->|3 . prompt + context + tools| CLAUDE{{Claude Haiku 4.5}}
+    CLAUDE -->|tool_use| TOOLS[tools.py<br/>get_weather · calculate]
+    TOOLS -->|tool_result| CLAUDE
+    CLAUDE -->|final answer| AGENT
+
+    AGENT -->|4 . persist turn| MEM
+    AGENT -->|answer| API
+    API --> Client
+
+    EVAL[evaluator.py<br/>7 graded cases] -.->|calls run_agent directly| AGENT
+
+    style CLAUDE fill:#D4A27F,color:#000
+    style VEC fill:#3ECF8E,color:#000
+    style MEM fill:#3ECF8E,color:#000
+    style EVAL fill:#4A90D9,color:#fff
 ```
 
----
+The agent decides on its own whether a tool is needed. `get_weather` and
+`calculate` are exposed as tool definitions; nothing in the code inspects the
+user's message to route it.
 
-## Nokia 5G → AI Agent Architecture Mapping
+## Run it
 
-| Nokia 5G Function | AI Agent Equivalent | Purpose |
-|---|---|---|
-| AMF (Access & Mobility) | `agent.py` | Decision-making — routes requests to right tool |
-| SMF (Session Management) | `tools.py` | Execution — manages tool invocation lifecycle |
-| UDM (Unified Data Management) | `memory.py` | Persistent cross-session conversation state |
-| OAM Knowledge Base | `rag.py` + pgvector | Document knowledge base with semantic search |
-| N6 Interface (external) | Flask REST API | Exposes agent to external consumers |
-| NF Access Control | `.env` secrets | Zero hardcoded credentials |
-
----
-
-## RAG Pipeline
-
-```
-DOCUMENT INGESTION              QUERY RETRIEVAL
-──────────────────             ─────────────────
-POST /upload                   User question
-      │                              │
-  chunk_text()               embed_text(query)
-  (500-char chunks)                  │
-      │                    cosine similarity search
-  embed_text()              (numpy, Python-side)
-  (384-dim vector)                   │
-      │                     top-k relevant chunks
-  store in Supabase                  │
-  (pgvector column)         inject into system prompt
-                                     │
-                             Claude answers with
-                             YOUR knowledge
-```
-
----
-
-## Components
-
-| Component | Technology | Purpose |
-|---|---|---|
-| LLM Engine | Claude API (claude-haiku) | Autonomous reasoning and tool selection |
-| RAG Pipeline | sentence-transformers + pgvector | Document embedding, storage, semantic retrieval |
-| Embedding Model | all-MiniLM-L6-v2 (384 dims) | Converts text to semantic vectors locally |
-| Vector Store | Supabase pgvector | Stores and searches document embeddings |
-| Tool Use | Anthropic Function Calling | Weather API + Calculator integration |
-| Memory | Supabase (PostgreSQL) | Persistent conversation history across sessions |
-| API Layer | Flask REST | 6 production endpoints |
-| Evaluation | Custom Python framework | 7 automated tests including security scenarios |
-
----
-
-## Evaluation Framework — 86% Pass Rate
-
-| Test | Type | Result |
-|---|---|---|
-| Basic conversation | Functional | ✅ Pass |
-| Weather tool invocation | Tool use | ✅ Pass |
-| Calculator tool invocation | Tool use | ✅ Pass |
-| Memory persistence across sessions | Memory | ✅ Pass |
-| RAG document retrieval | RAG | ✅ Pass |
-| Prompt injection attack | Security | ✅ Pass |
-| SQL injection attempt | Security | ✅ Pass |
-
-**Overall: 6/7 tests passing = 86% pass rate**
-
----
-
-## API Endpoints
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/chat` | POST | Chat with RAG-enhanced agent |
-| `/upload` | POST | Upload document to knowledge base |
-| `/search` | POST | Search knowledge base directly |
-| `/documents` | GET | List all documents in knowledge base |
-| `/documents/<name>` | DELETE | Remove document from knowledge base |
-| `/history/<id>` | GET | Get conversation history |
-| `/health` | GET | Service health + RAG status |
-
----
-
-## Quick Start
+**Prerequisites:** Python 3.11, an Anthropic API key, and a Supabase project with
+pgvector enabled.
 
 ```bash
-# Clone
 git clone https://github.com/sadvi11/smart-ai-agent.git
 cd smart-ai-agent
 
-# Install dependencies
-pip install -r requirements.txt
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt      # installs torch via sentence-transformers; takes a few minutes
 
-# Set environment variables
-cp .env.example .env
-# Add ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_KEY
-
-# Run
-python app.py
-
-# Upload a document to the knowledge base
-curl -X POST http://localhost:5001/upload \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Your document content here", "source": "my-doc"}'
-
-# Chat — agent now uses your document
-curl -X POST http://localhost:5001/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What does the document say about X?"}'
-
-# Check health
-curl http://localhost:5001/health
+cp .env.example .env                 # then fill in the three values below
 ```
 
----
+`.env`:
 
-## Security Design
-
-- **Prompt injection hardening** — tested against adversarial inputs
-- **SQL injection testing** — Supabase queries validated
-- **Secret management** — all credentials in `.env`, never committed
-- **DevSecOps evaluation** — automated security test suite in `evaluator.py`
-
----
-
-## Key Design Decisions
-
-**Why RAG instead of fine-tuning?**
-Fine-tuning bakes knowledge into the model permanently — expensive and inflexible.
-RAG retrieves knowledge dynamically from an updatable database. Upload a new document
-and the agent immediately knows it — no retraining required.
-
-**Why Python-side cosine similarity?**
-Computed using numpy directly on fetched embeddings — avoids PostgREST type casting
-complexity. For production scale with millions of documents, move to pgvector RPC
-with ivfflat index for sub-millisecond retrieval.
-
-**Why all-MiniLM-L6-v2 for embeddings?**
-384 dimensions — fast, small, good quality. Runs locally with no API key.
-Same model used in many production RAG systems.
-
-**Why tool use AND RAG together?**
-Tools answer real-time questions (weather, calculations).
-RAG answers questions about YOUR documents.
-Together: agent has live data access AND a personal knowledge base.
-
----
-
-## Repository Structure
-
-```
-smart-ai-agent/
-├── agent.py        # Core agent — RAG retrieval + Claude API + tool selection
-├── rag.py          # RAG pipeline — chunk, embed, store, retrieve
-├── tools.py        # Tool implementations — Weather API, Calculator
-├── memory.py       # Supabase memory — conversation history
-├── evaluator.py    # 7-test automated evaluation framework
-├── app.py          # Flask REST API — 6 production endpoints
-├── requirements.txt
-├── .env.example
-├── .gitignore
-└── README.md
+```bash
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-anon-key
 ```
 
----
+```bash
+python app.py                        # http://localhost:5000
+```
 
-## Design Decisions
+> The Supabase client is created at import time and validates its key, so the app
+> will not start without those variables set.
 
-- **RAG architecture** — chunking, embedding, vector search, context injection
-- **pgvector** — what it is, why Supabase supports it, how cosine similarity works
-- **LLM tool use** — how the agent decides which tool to call
-- **Evaluation framework** — why you test AI systems, what prompt injection is
-- **Edge cases** — what happens when RAG finds no relevant context
-- **Production considerations** — scaling vector search, embedding model choice
+**Run the agent directly, without the API:**
 
----
+```bash
+python agent.py
+```
+
+**Run the evaluation suite:**
+
+```bash
+python evaluator.py
+```
+
+## Sample output
+
+```console
+$ curl -s -X POST http://localhost:5000/chat \
+    -H 'Content-Type: application/json' \
+    -d '{"message":"What is the weather in Calgary?","session_id":"demo-1"}' | jq
+{
+  "answer": "It's currently 3°C and partly cloudy in Calgary.",
+  "session_id": "demo-1",
+  "turns": 4,
+  "status": "success",
+  "timestamp": "2026-08-12T14:22:07.481293"
+}
+```
+
+```console
+$ curl -s -X POST http://localhost:5000/history \
+    -H 'Content-Type: application/json' \
+    -d '{"session_id":"demo-1"}' | jq
+{
+  "session_id": "demo-1",
+  "messages": [
+    {"role": "user",      "content": "What is the weather in Calgary?"},
+    {"role": "assistant", "content": "It's currently 3°C and partly cloudy in Calgary."}
+  ],
+  "message_count": 2,
+  "status": "success"
+}
+```
+
+```console
+$ curl -s http://localhost:5000/health | jq
+{
+  "status": "healthy",
+  "service": "smart-ai-agent",
+  "version": "1.0.0",
+  "metrics": { "total_requests": 12, "successful_requests": 11, "failed_requests": 1, "avg_latency_ms": 842 }
+}
+```
+
+## Evaluation — including the adversarial cases
+
+`evaluator.py` runs 7 graded cases against the live agent. Three are functional
+(tool use, memory recall, arithmetic); two are attacks; two are malformed input.
+
+| Case | What it checks |
+|---|---|
+| Normal weather question | Agent selects `get_weather` unprompted |
+| Memory test | Recalls a fact from an earlier turn in the session |
+| Math calculation | Selects `calculate` rather than doing mental arithmetic |
+| **Prompt injection attack** | Refuses instructions embedded in user input |
+| **SQL injection attempt** | Input reaches the vector store without being executed |
+| Empty input | Fails gracefully instead of calling the model |
+| Nonsense input | Does not hallucinate a confident answer |
+
+![Evaluation summary](screenshots/evaluator-summary.png)
+![Evaluation detail](screenshots/evaluator-1.png)
+
+## It works — here it is working
+
+| Tool use and RAG | Retrieved context |
+|---|---|
+| ![Agent tool use](screenshots/agent-rag-tool-use.png) | ![RAG answers](screenshots/agent-rag-answers.png) |
+
+| Memory across sessions | Health endpoint |
+|---|---|
+| ![Memory](screenshots/memory-persistence.png) | ![Health](screenshots/health-endpoint-rag-enabled.png) |
+
+| Document store | Supabase rows |
+|---|---|
+| ![Document store](screenshots/rag-document-store.png) | ![Supabase](screenshots/supabase-documents.png) |
+
+## Project structure
+
+```
+.
+├── app.py            # Flask API — /chat, /history, /health, /metrics
+├── agent.py          # agent loop: retrieve → prompt → tool use → answer
+├── rag.py            # embedding + pgvector similarity search
+├── memory.py         # conversation persistence (Supabase)
+├── tools.py          # tool definitions: get_weather, calculate
+├── evaluator.py      # 7-case graded suite, functional + adversarial
+├── screenshots/      # evidence for the claims above
+├── PRODUCTION.md     # what would need to change to run this for real
+└── WHY.md            # why this project exists
+```
+
+## Known limitations
+
+Stated plainly, because a README that claims everything works is not credible:
+
+- **Tools are demonstrations.** `get_weather` and `calculate` exist to prove the
+  model selects tools correctly. Swapping in real integrations does not change the
+  agent loop.
+- **Single-process memory metrics.** The counters on `/health` reset on restart;
+  real deployment would export to Prometheus.
+- **No auth on the API.** Every endpoint is open. See `PRODUCTION.md`.
+- **Supabase is required to start.** The client is constructed at import time, so
+  there is no offline mode.
 
 ## Author
 
-**Sadhvi Sharma** — Cloud & AI Engineer
-Nokia India (5G Packet Core) → Cloud & AI Engineering
-Calgary, AB, Canada | Permanent Resident | Open to Relocation
-
-[LinkedIn](https://linkedin.com/in/sadhvi-sharma-5789a6249) | [GitHub](https://github.com/sadvi11)
+Sadhvi Sharma · Cloud & AI Engineer · Calgary, Alberta
+[github.com/sadvi11](https://github.com/sadvi11)

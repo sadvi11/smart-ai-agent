@@ -1,6 +1,12 @@
 import logging
 import json
 from flask import Flask, request, jsonify
+
+# The agent, RAG and memory layers this API exists to expose. Without these
+# imports /chat returned a hardcoded placeholder and /history always returned
+# an empty list -- the REST surface was never connected to the agent.
+from agent import run_agent
+import memory
 from datetime import datetime
 import os
 from functools import wraps
@@ -97,10 +103,22 @@ def chat():
             logger.warning(f"Invalid session_id length: {len(session_id)}")
             return {"error": "Session ID must be 1-255 characters"}, 400
         logger.info(f"Processing chat request: session={session_id}, msg_len={len(message)}")
-        answer = f"[Agent response to: {message}]"
+        # Load prior turns so the agent has conversational context. This
+        # returns [] if the memory backend is unreachable, so a Supabase
+        # outage degrades to a stateless answer rather than a 500.
+        conversation_history = memory.load_history(session_id)
+
+        answer, conversation_history = run_agent(message, conversation_history)
+
+        # Persist the turn. Failures here are logged inside memory.py and must
+        # not fail the request -- the user already has their answer.
+        memory.save_message(session_id, "user", message)
+        memory.save_message(session_id, "assistant", answer)
+
         response = {
             "answer": answer,
             "session_id": session_id,
+            "turns": len(conversation_history),
             "status": "success",
             "timestamp": datetime.now().isoformat()
         }
@@ -123,9 +141,11 @@ def history():
         if not session_id:
             return {"error": "session_id required"}, 400
         logger.info(f"Fetching history for session: {session_id}")
+        messages = memory.load_history(session_id)
         history_data = {
             "session_id": session_id,
-            "messages": [],
+            "messages": messages,
+            "message_count": len(messages),
             "status": "success"
         }
         return jsonify(history_data), 200
