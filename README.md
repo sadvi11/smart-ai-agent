@@ -30,30 +30,36 @@ someone attacks it.
 
 ```mermaid
 flowchart TB
-    Client([Client]) -->|POST /chat| API[Flask API<br/>app.py]
+    Client(["Client"]) -->|"POST /chat"| API["Flask API<br/>app.py"]
 
-    API -->|load prior turns| MEM[(Supabase<br/>conversations)]
-    API --> AGENT[Agent loop<br/>agent.py]
+    API -->|"load prior turns"| MEM[("Supabase<br/>conversations")]
+    API --> AGENT["Agent loop<br/>agent.py"]
 
-    AGENT -->|1 . embed query| EMB[sentence-transformers<br/>all-MiniLM-L6-v2]
-    EMB -->|2 . similarity search| VEC[(Supabase pgvector<br/>documents)]
-    VEC -->|retrieved context| AGENT
+    AGENT -->|"1 · embed query"| EMB["sentence-transformers<br/>all-MiniLM-L6-v2"]
+    EMB -->|"2 · similarity search"| VEC[("Supabase pgvector<br/>documents")]
+    VEC -->|"retrieved context"| AGENT
 
-    AGENT -->|3 . prompt + context + tools| CLAUDE{{Claude Haiku 4.5}}
-    CLAUDE -->|tool_use| TOOLS[tools.py<br/>get_weather · calculate]
-    TOOLS -->|tool_result| CLAUDE
-    CLAUDE -->|final answer| AGENT
+    AGENT -->|"3 · prompt + context + tools"| CLAUDE{{"Claude Haiku 4.5"}}
+    CLAUDE -->|"tool_use"| TOOLS["tools.py<br/>get_weather · calculate"]
+    TOOLS -->|"tool_result"| CLAUDE
+    CLAUDE -->|"final answer"| AGENT
 
-    AGENT -->|4 . persist turn| MEM
-    AGENT -->|answer| API
+    AGENT -->|"4 · persist turn"| MEM
+    AGENT -->|"answer"| API
     API --> Client
 
-    EVAL[evaluator.py<br/>7 graded cases] -.->|calls run_agent directly| AGENT
+    EVAL["evaluator.py<br/>7 graded cases"] -.->|"calls run_agent directly"| AGENT
 
-    style CLAUDE fill:#D4A27F,color:#000
-    style VEC fill:#3ECF8E,color:#000
-    style MEM fill:#3ECF8E,color:#000
-    style EVAL fill:#4A90D9,color:#fff
+    linkStyle default stroke:#64748b,stroke-width:1.5px
+    classDef default fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#0f172a
+    classDef data  fill:#ecfdf5,stroke:#047857,stroke-width:3px,color:#064e3b
+    classDef decide fill:#dbeafe,stroke:#1d4ed8,stroke-width:3px,color:#1e3a8a
+    classDef k8s   fill:#eef2ff,stroke:#1d4ed8,stroke-width:3px,color:#1e3a8a
+    classDef ok    fill:#dcfce7,stroke:#15803d,stroke-width:3px,color:#14532d
+    class CLAUDE decide
+    class VEC,MEM data
+    class EVAL ok
+    class AGENT k8s
 ```
 
 The agent decides on its own whether a tool is needed. `get_weather` and
