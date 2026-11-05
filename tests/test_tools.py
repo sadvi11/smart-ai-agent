@@ -51,3 +51,55 @@ def test_calculate_rejects_oversized_input():
 
 def test_calculate_rejects_non_string():
     assert calculate(None).startswith("Invalid")
+
+
+# ── get_weather ──────────────────────────────────────────────────────
+from unittest.mock import MagicMock, patch
+
+import requests
+
+import tools
+
+
+def _ok_response():
+    r = MagicMock()
+    r.raise_for_status.return_value = None
+    r.json.return_value = {"current": {"temp_c": 3, "condition": {"text": "Cloudy"}, "humidity": 50}}
+    return r
+
+
+def test_weather_uses_https_params_and_timeout(monkeypatch):
+    monkeypatch.setenv("WEATHER_API_KEY", "test-value")
+    with patch.object(tools.requests, "get", return_value=_ok_response()) as g:
+        out = tools.get_weather("Calgary")
+    assert "3°C" in out
+    args, kwargs = g.call_args
+    assert args[0].startswith("https://")
+    assert kwargs["params"]["q"] == "Calgary"
+    assert kwargs["timeout"] > 0
+
+
+def test_weather_without_key_does_not_call_upstream(monkeypatch):
+    monkeypatch.delenv("WEATHER_API_KEY", raising=False)
+    with patch.object(tools.requests, "get") as g:
+        assert "not configured" in tools.get_weather("Calgary")
+    assert not g.called
+
+
+def test_weather_error_does_not_leak_key(monkeypatch):
+    monkeypatch.setenv("WEATHER_API_KEY", "super-sensitive-value")
+    boom = requests.ConnectionError("failed for url ...key=super-sensitive-value")
+    with patch.object(tools.requests, "get", side_effect=boom):
+        out = tools.get_weather("Calgary")
+    assert "super-sensitive-value" not in out
+
+
+def test_weather_http_error_reports_status_only(monkeypatch):
+    monkeypatch.setenv("WEATHER_API_KEY", "super-sensitive-value")
+    resp = MagicMock(status_code=401)
+    err = requests.HTTPError("401 for url key=super-sensitive-value", response=resp)
+    bad = MagicMock()
+    bad.raise_for_status.side_effect = err
+    with patch.object(tools.requests, "get", return_value=bad):
+        out = tools.get_weather("Calgary")
+    assert "401" in out and "super-sensitive-value" not in out

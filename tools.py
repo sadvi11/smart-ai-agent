@@ -7,18 +7,40 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+WEATHER_URL = "https://api.weatherapi.com/v1/current.json"
+WEATHER_TIMEOUT_SECONDS = 10
+
+
 def get_weather(city):
+    """Look up current weather via WeatherAPI (https://www.weatherapi.com/docs/).
+
+    Uses HTTPS, passes the city as a query parameter so it is URL-encoded, and
+    sets a timeout so a slow upstream cannot hang the request thread.
+    """
     api_key = os.getenv("WEATHER_API_KEY")
-    url = f"http://api.weatherapi.com/v1/current.json?key={api_key}&q={city}"
+    if not api_key:
+        return "Could not get weather: WEATHER_API_KEY is not configured"
+    if not isinstance(city, str) or not city.strip():
+        return "Could not get weather: provide a city name"
     try:
-        response = requests.get(url)
+        response = requests.get(
+            WEATHER_URL,
+            params={"key": api_key, "q": city.strip()},
+            timeout=WEATHER_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
         data = response.json()
         temp = data['current']['temp_c']
         condition = data['current']['condition']['text']
         humidity = data['current']['humidity']
         return f"Weather in {city}: {temp}°C, {condition}, Humidity: {humidity}%"
-    except Exception as e:
-        return f"Could not get weather: {str(e)}"
+    except requests.HTTPError as e:
+        # str(e) would echo the request URL, which contains the API key.
+        return f"Could not get weather: upstream returned HTTP {e.response.status_code}"
+    except requests.RequestException:
+        return "Could not get weather: upstream request failed"
+    except (KeyError, ValueError):
+        return "Could not get weather: unexpected response format"
 
 
 _BIN_OPS = {
