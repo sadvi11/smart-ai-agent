@@ -28,6 +28,12 @@ load_dotenv()
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
+# Model settings come from the environment so the model can be changed (or
+# rolled back after a retirement) without a code change. Defaults match the
+# values that were previously hard-coded.
+MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+MAX_TOKENS = int(os.getenv("AGENT_MAX_TOKENS", "1024"))
+
 
 def build_system_prompt(rag_context: str = "") -> str:
     """
@@ -63,7 +69,7 @@ def build_system_prompt(rag_context: str = "") -> str:
     return base_prompt
 
 
-def run_agent(user_message: str, conversation_history: list = []) -> tuple:
+def run_agent(user_message: str, conversation_history: list | None = None) -> tuple:
     """
     Run the AI agent with RAG + tool use.
 
@@ -81,6 +87,11 @@ def run_agent(user_message: str, conversation_history: list = []) -> tuple:
     Returns:
         Tuple of (answer string, updated history list)
     """
+    # A mutable default ([]) is shared across calls, so history from one
+    # caller would leak into the next.
+    if conversation_history is None:
+        conversation_history = []
+
     print(f"\nUser said: {user_message}")
 
     if not user_message.strip():
@@ -110,8 +121,8 @@ def run_agent(user_message: str, conversation_history: list = []) -> tuple:
 
     # ── Step 4: Call Claude ───────────────────────────────────────────
     response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1024,
+        model=MODEL,
+        max_tokens=MAX_TOKENS,
         system=system_prompt,
         tools=TOOLS,
         messages=conversation_history
@@ -157,8 +168,8 @@ def run_agent(user_message: str, conversation_history: list = []) -> tuple:
 
         # Send tool result back to Claude for final answer
         final_response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
+            model=MODEL,
+            max_tokens=MAX_TOKENS,
             system=system_prompt,
             tools=TOOLS,
             messages=conversation_history
