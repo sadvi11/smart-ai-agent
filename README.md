@@ -93,6 +93,14 @@ SUPABASE_KEY=your-anon-key
 python app.py                        # http://localhost:5000
 ```
 
+Optional settings (defaults in parentheses):
+
+| Variable | Purpose |
+|---|---|
+| `ANTHROPIC_MODEL` (`claude-haiku-4-5-20251001`) | Model used by the agent loop; see the [model list](https://docs.anthropic.com/en/docs/about-claude/models) |
+| `AGENT_MAX_TOKENS` (`1024`) | `max_tokens` per model call |
+| `WEATHER_API_KEY` | Needed for the `get_weather` tool ([WeatherAPI](https://www.weatherapi.com/docs/)); without it the tool returns a clear error |
+
 > The Supabase client is created at import time and validates its key, so the app
 > will not start without those variables set.
 

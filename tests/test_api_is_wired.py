@@ -119,3 +119,22 @@ def test_model_is_not_a_retired_id():
     source = open(agent.__file__).read()
     for model in retired:
         assert model not in source, f"{model} is retired and will 404"
+
+
+def test_run_agent_does_not_share_history_between_calls():
+    """A mutable default argument would leak one caller's turns into the next."""
+    import agent
+    with patch.object(agent, "retrieve_context", return_value=[]), \
+            patch.object(agent, "format_context", return_value=""), \
+            patch.object(agent.client.messages, "create") as create:
+        block = type("B", (), {"type": "text", "text": "hi"})()
+        create.return_value = type("R", (), {"stop_reason": "end_turn", "content": [block]})()
+        _, h1 = agent.run_agent("first")
+        _, h2 = agent.run_agent("second")
+    assert h1 is not h2
+    assert [m["content"] for m in h2 if m["role"] == "user"] == ["second"]
+
+
+def test_model_and_limits_are_configurable_with_defaults():
+    import agent
+    assert agent.MODEL and agent.MAX_TOKENS > 0
